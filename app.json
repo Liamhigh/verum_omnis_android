@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Verum Omnis",
+    "slug": "verum-omnis",
+    "version": "1.0.0",
+    "updates": { "enabled": false },
+    "android": {
+      "package": "foundation.verumglobal.omnis",
+      "versionCode": 1
+    },
+    "extra": {
+      "API_BASE": "https://verum-omnis-forensic-ai-310016281459.us-west1.run.app"
+    }
+  }
+}
