@@ -7,9 +7,16 @@
 >
 > The bundled sealed PDF is the FINAL2 render of the instrument; its SHA-512 is
 > `3360e3844641ec889b9718dfc645831a16a58802388a68086ca106ae45a598170ef9a74e64301385cf22061236beaebb22637d2c82f0a18c0fd16728df341b4b`.
-> An earlier render of the same sealed instrument (FINAL) carried SHA-512
-> `9ef0607037e7f65849e4a7be144c7e8500dea933e37df0459d721346641598b02e81379665d4283854604ab9da6ad6859c6695429a3858593d484c7a22546d5b`;
-> both renders carry seal `VO-9A4F3C5E825C` and identical instrument text.
+> Three renders of this sealed instrument are known; all carry seal
+> `VO-9A4F3C5E825C` and identical instrument text (verified by text
+> comparison), differing only as PDF binaries:
+>
+> | Render | SHA-512 |
+> |--------|---------|
+> | FINAL  | `9ef0607037e7f65849e4a7be144c7e8500dea933e37df0459d721346641598b02e81379665d4283854604ab9da6ad6859c6695429a3858593d484c7a22546d5b` |
+> | FINAL1 | `95abe9b06a29538c62fa46a53c6cc8b4f86027275cec72a968b036a9873526257877aa3c47c2702e94782d0346feb186093bd1b18b30b0b884294e95593bac80` |
+> | FINAL2 | `3360e3844641ec889b9718dfc645831a16a58802388a68086ca106ae45a598170ef9a74e64301385cf22061236beaebb22637d2c82f0a18c0fd16728df341b4b` (bundled) |
+>
 > Verify at verumglobal.foundation/verify.html.
 >
 > Constitution v6.1 (seal `VO-9E51D3F507E6`) was the operating instrument of the
