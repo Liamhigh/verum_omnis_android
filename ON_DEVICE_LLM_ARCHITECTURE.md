@@ -9,6 +9,26 @@
 
 ---
 
+## 0. Model Refresh In Progress (2026-08)
+
+Per `OFFLINE_MODEL_RESEARCH_2026-08.md`, the model set is being upgraded:
+
+| Slot | Serving today | Upgrading to | Status |
+|------|---------------|--------------|--------|
+| Report writer ("Gemma 3" slot) | Gemma 3 4B / 1B | **Gemma 4 E4B / E2B** | Pending hash pin |
+| Communicator + verification antithesis ("Phi-3" slot) | Phi-3 mini | **Qwen3.5-4B** | Pending hash pin |
+| Flagship communicator ("Gemma 4" slot) | Gemma 4 12B | — (already current) | Active |
+
+The native llama.cpp pin has been bumped to release b10312 (Gemma 4 E-series +
+Qwen3.5 Gated DeltaNet support). Each upgraded spec activates automatically in
+`ModelCatalog` once its SHA-256 is pinned in `core/Constitution.kt` — run
+`tools/pin-models.sh` on an unrestricted network and paste in its output. Until
+then the app keeps serving the verified legacy models below; it never downloads
+an artifact whose hash it cannot verify. Sections 3–9 describe the legacy set
+and will be rewritten when the refresh lands.
+
+---
+
 ## 1. What This Document Covers
 
 This document specifies the on-device Large Language Model architecture for Verum Omnis. Unlike cloud-based AI systems that send user data to remote servers, Verum Omnis runs **entirely on the user's device** using locally-loaded models. No document content, no evidence, no personal data ever leaves the phone.

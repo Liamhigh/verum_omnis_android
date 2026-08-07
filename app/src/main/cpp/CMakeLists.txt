@@ -11,7 +11,9 @@ project(voinference)
 
 include(FetchContent)
 
-set(VO_LLAMA_CPP_COMMIT "ff067f76dd8e9e05f0528056f1274adf01a54d70" CACHE STRING
+# b10312 (2026-08): first pin with Gemma 4 E-series and Qwen3.5 Gated DeltaNet
+# support, needed for the 2026-08 model refresh (OFFLINE_MODEL_RESEARCH_2026-08.md).
+set(VO_LLAMA_CPP_COMMIT "e1470ee6a2a9a44a3246c7b832efd1756badbb9e" CACHE STRING
     "llama.cpp commit pinned for reproducible native builds")
 
 # Keep the native build lean: only the inference library, none of llama.cpp's own

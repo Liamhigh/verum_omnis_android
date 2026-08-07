@@ -60,7 +60,7 @@
 
 | Dependency | Version | Source | Purpose |
 |-----------|---------|--------|---------|
-| llama.cpp | commit `ff067f76dd8e9e05f0528056f1274adf01a54d70` (2026-07-26) | GitHub/ggerganov, fetched via CMake FetchContent at build time (see app/src/main/cpp/CMakeLists.txt) — not vendored into this repo | On-device LLM inference |
+| llama.cpp | commit `e1470ee6a2a9a44a3246c7b832efd1756badbb9e` (release b10312, 2026-08) — adds Gemma 4 E-series and Qwen3.5 Gated DeltaNet support for the 2026-08 model refresh | GitHub/ggml-org, fetched via CMake FetchContent at build time (see app/src/main/cpp/CMakeLists.txt) — not vendored into this repo | On-device LLM inference |
 | llama.cpp JNI | app/src/main/cpp/voinference_jni.cpp | Local build | Android JNI bridge |
 
 ## On-Device Models

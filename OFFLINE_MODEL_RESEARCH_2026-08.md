@@ -123,6 +123,14 @@ and schedule the Qwen move for the next llama.cpp bump.
    capability on 8 GB+ devices, consistent with the benchmark evidence that
    sub-12B models fail law exams.
 
+### Migration status
+
+The staged swap has landed: llama.cpp is bumped to b10312, the next-gen specs
+live in `Constitution.kt`/`ModelCatalog.kt` behind a pinned-hash gate, and
+`tools/pin-models.sh` produces the hashes. The only remaining step is running
+that script on an unrestricted network and pasting its output into
+`Constitution.kt` — the new models activate automatically once pinned.
+
 ### Migration checklist (next PR)
 
 1. Bump vendored llama.cpp to a build with Gemma 4 + Qwen3.5 (Gated DeltaNet)

@@ -98,6 +98,37 @@ object Constitution {
     const val MODEL_GEMMA4_SHA256 = "d333b368be6cd655563fce18aede26027e208fdb13816d35eb06983ce054044b"
     const val MODEL_GEMMA4_SIZE_BYTES = 7662531872L
 
+    // ── 2026-08 model refresh (OFFLINE_MODEL_RESEARCH_2026-08.md) ──
+    //
+    // Target set: Gemma 4 E4B/E2B take over the report-writer slot, Qwen3.5-4B
+    // takes over the communicator slot — chosen so the triple-verification
+    // thesis (Google) and antithesis (Alibaba) legs share no lab, training
+    // pipeline, or architecture. The flagship Gemma 4 12B pin above is already
+    // current and stays.
+    //
+    // A hash here is either computed from the downloaded artifact or PENDING —
+    // never copied from a webpage, never guessed. Run tools/pin-models.sh on an
+    // unrestricted network, verify the printed values, and paste them in. While
+    // a spec is PENDING, ModelCatalog keeps serving the legacy verified spec
+    // above, so the app never downloads an artifact it cannot verify.
+    const val PENDING_SHA256 = "PENDING"
+    const val PENDING_SIZE_BYTES = 0L
+
+    const val MODEL_GEMMA4_E4B_URL =
+        "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf"
+    const val MODEL_GEMMA4_E4B_SHA256 = PENDING_SHA256
+    const val MODEL_GEMMA4_E4B_SIZE_BYTES = PENDING_SIZE_BYTES
+
+    const val MODEL_GEMMA4_E2B_URL =
+        "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_K_M.gguf"
+    const val MODEL_GEMMA4_E2B_SHA256 = PENDING_SHA256
+    const val MODEL_GEMMA4_E2B_SIZE_BYTES = PENDING_SIZE_BYTES
+
+    const val MODEL_QWEN35_4B_URL =
+        "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf"
+    const val MODEL_QWEN35_4B_SHA256 = PENDING_SHA256
+    const val MODEL_QWEN35_4B_SIZE_BYTES = PENDING_SIZE_BYTES
+
     const val NINE_BRAIN_VERSION = "v1.0"
     const val SEALING_PROTOCOL = "verum-omnis-seal v1.0"
     const val TAGLINE = "AI Forensics for Truth"
