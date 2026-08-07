@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Canonical Verum Omnis tokens (VERUM_UI_TOKENS.md §1) — must match
+         ui/theme/Theme.kt exactly so the status bar, nav bar and launch
+         window are indistinguishable from the Compose surfaces. -->
+    <color name="vo_background">#FF040D1B</color>
+    <color name="vo_gold">#FFD4A843</color>
+    <color name="vo_navy">#FF0A1628</color>
+</resources>
