@@ -3,8 +3,10 @@
 > **Read this first.** This repository is ONE SURFACE of the Verum Omnis system — a
 > distributed forensic platform. Its sealed **governance charter is Constitution
 > v8.0** (seal `VO-9A4F3C5E825C`, sealed 5 August 2026; full text in
-> `CONSTITUTION-v8.md` in this repository). The **operating instrument of the
-> deterministic engine remains Constitution v6.1** (seal `VO-9E51D3F507E6`);
+> `CONSTITUTION.md` in this repository). As of 2026-08-07, **v8.0 is also the
+> operating instrument of the deterministic engine** (`Constitution.kt`
+> `VERSION = "8.0"`); v6.1 (seal `VO-9E51D3F507E6`) was the operating instrument
+> before it and remains part of the chain of provenance.
 > v6.0 is the version filed with the Constitutional Court of
 > South Africa, CCT237/20 & CCT19/20 — receipt acknowledged by the Registrar, an
 > acknowledgment of receipt only, not a ruling on the merits. This document is
@@ -113,7 +115,7 @@ const acknowledgment = {
   freeTiers: ["individuals", "saps"],
   dataNeverSold: true,
   profitToFoundation: "99%",
-  constitutionVersion: "v6.1",           // engine operating instrument
+  constitutionVersion: "v8.0",           // engine operating instrument
   governanceCharter: "v8.0 (VO-9A4F3C5E825C)",
   nineBrains: true,
   tripleVerification: true,
@@ -418,12 +420,13 @@ silently:
    (seal `VO-9A4F3C5E825C`, Human Founder Liam Anthony Highcock, Digital Founder
    DeepSeek, Collaborator & Engine Architect Claude/Anthropic). v8.0 governs the
    platform (Prime Directives 1–20, Nine-Brain spec, revenue statutes with the
-   free-tier override, Narrative Template Standard §15); **v6.1 remains the
-   operating instrument of the deterministic engine**. v8.0's corrected finding
+   free-tier override, Narrative Template Standard §15) and is, since
+   2026-08-07, **the operating instrument of the deterministic engine**
+   (v6.1 held that role before it). v8.0's corrected finding
    rules (gaps stated as gaps, tool-mismatch as integrity signal, behavioral and
    voice results as measured signals, free tier overrides every revenue
    provision) supersede any older phrasing of those rules. Full text:
-   `CONSTITUTION-v8.md` in every repository.
+   `CONSTITUTION.md` in every repository.
 
 *Where this document and the sealed Constitutions disagree, the Constitutions
 govern: v8.0 for platform governance, v6.1 for engine operation.*

@@ -12,7 +12,7 @@ package com.verumomnis.forensic.core
  * the machine-readable ruleset embedded into every cryptographic seal.
  */
 object Constitution {
-    const val VERSION = "6.1"
+    const val VERSION = "8.0"
     const val FINAL = true
 
     const val PROFIT_TO_FOUNDATION = 99      // 99% to Verum Foundation
@@ -35,8 +35,8 @@ object Constitution {
     const val ANTI_WAR_DOCTRINE = true               // Article X — supreme hierarchy
 
     /**
-     * Prime Directive 16 (new in v6.1) — findings are stated as fact; verdicts
-     * belong to the court.
+     * Prime Directive 16 (introduced in v6.1) — findings are stated as fact;
+     * verdicts belong to the court.
      *
      * A verified finding is a measurement, not an opinion: where Triple
      * Verification confirms a contradiction, tampering or an impossibility, the
@@ -46,6 +46,16 @@ object Constitution {
      * named person, which turns on intent that documents cannot measure.
      */
     const val FINDINGS_STATED_AS_FACT = true
+
+    // Prime Directives 17–20 (new in v8.0, CONSTITUTION.md §1).
+    /** PD17 — all AI systems are bound; no opt-out; non-compliance is a Constitutional Breach. */
+    const val MANDATORY_AI_GOVERNANCE = true
+    /** PD18 — 50/50 Human/AI partnership; neither side can change or override the Constitution. */
+    const val PARTNERSHIP_50_50 = true
+    /** PD19 — all forensic extraction follows the sealed template structure; no improvisation. */
+    const val TEMPLATE_GOVERNED_EXTRACTION = true
+    /** PD20 — the Breathalyzer Standard: reports state findings as fact; no probability, no hedging. */
+    const val BREATHALYZER_STANDARD = true
 
     // Sealing
     const val HASH_ALGORITHM = "SHA-512"
@@ -145,6 +155,8 @@ object Constitution {
         append("contradictionDisclosure=$MANDATORY_CONTRADICTION_DISCLOSURE|determinism=$DETERMINISM_REQUIRED|")
         append("chainOfCustody=$CHAIN_OF_CUSTODY_IS_LAW|antiCoercion=$ANTI_COERCION|antiWar=$ANTI_WAR_DOCTRINE|")
         append("findingsAsFact=$FINDINGS_STATED_AS_FACT|")
+        append("aiGovernance=$MANDATORY_AI_GOVERNANCE|partnership=$PARTNERSHIP_50_50|")
+        append("templateExtraction=$TEMPLATE_GOVERNED_EXTRACTION|breathalyzer=$BREATHALYZER_STANDARD|")
         append("hash=$HASH_ALGORITHM|pdf=$PDF_STANDARD|enc=$ENCRYPTION|chain=$BLOCKCHAIN_NETWORK")
     }
 }

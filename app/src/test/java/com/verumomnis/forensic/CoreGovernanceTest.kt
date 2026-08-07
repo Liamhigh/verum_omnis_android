@@ -13,16 +13,33 @@ class CoreGovernanceTest {
 
     @Test
     fun constitutionConstantsAreImmutableValues() {
-        // v6.1: adds Prime Directive 16 (findings stated as fact) and drops the
-        // unsupported "Court-Validated" status. Sealed 5 Aug 2026, VO-9E51D3F507E6.
-        assertEquals("6.1", Constitution.VERSION)
+        // v8.0 FINAL: the operating instrument since 2026-08-07. Sealed
+        // 5 Aug 2026, VO-9A4F3C5E825C. Adds Prime Directives 17–20 (mandatory
+        // AI governance, 50/50 partnership, template-governed extraction, the
+        // Breathalyzer Standard) on top of v6.1's PD16.
+        assertEquals("8.0", Constitution.VERSION)
         assertTrue(Constitution.FINAL)
         assertTrue(Constitution.FINDINGS_STATED_AS_FACT)
+        assertTrue(Constitution.MANDATORY_AI_GOVERNANCE)
+        assertTrue(Constitution.PARTNERSHIP_50_50)
+        assertTrue(Constitution.TEMPLATE_GOVERNED_EXTRACTION)
+        assertTrue(Constitution.BREATHALYZER_STANDARD)
         assertEquals(9, Constitution.BRAIN_COUNT)
         assertEquals(20, Constitution.COMMISSION_PERCENT)
         assertEquals(72, Constitution.DEAD_MAN_SWITCH_HOURS)
         assertEquals(7, Constitution.GUARDIAN_COUNCIL_SIZE)
         assertEquals(0.003, Constitution.ETHICS_HALT_THRESHOLD, 0.0)
+    }
+
+    @Test
+    fun rulesetFingerprintRecordsTheV8Directives() {
+        // The fingerprint is embedded into every seal; a directive that is not
+        // in it is a directive a seal cannot prove it was governed by.
+        val fp = Constitution.rulesetFingerprint()
+        assertTrue(fp.startsWith("VO-CONSTITUTION|v=8.0|final=true|"))
+        for (key in listOf("aiGovernance=true", "partnership=true", "templateExtraction=true", "breathalyzer=true")) {
+            assertTrue("fingerprint must record $key", fp.contains(key))
+        }
     }
 
     @Test
