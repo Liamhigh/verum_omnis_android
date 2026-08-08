@@ -1,37 +1,208 @@
 package com.verumomnis.forensic.engine.contradiction
 
 import com.verumomnis.forensic.core.Constitution
+import com.verumomnis.forensic.llm.Gemma3Runtime
+import com.verumomnis.forensic.llm.UnavailableAntithesisRuntime
+import com.verumomnis.forensic.llm.UnavailableGemma3Runtime
 
 /**
- * Triple Verifier & Report Generator — v5.3.1c.
- * Triple-AI consensus + actor profiling + multi-format report output.
+ * Triple Verifier & Report Generator.
+ * Triple verification (Prime Directive 13): Thesis (report-writer model) +
+ * Antithesis (independent communicator model) + Synthesis (deterministic
+ * Nine-Brain engine). A leg that did not actually run reports NOT RUN — a
+ * sealed report never asserts an AI verification that never happened.
  */
 object TripleVerifier {
 
     /**
-     * Triple-AI Verification: Thesis (Gemma 3) + Antithesis (Phi-3) + Synthesis (9-Brain).
-     * All three must concur for a finding to be confirmed.
-     * In deterministic mode, all three always concur (evidence is self-verifying).
+     * Findings each model leg verifies in one pass. Bounds prompt work on
+     * device; anything past the cap is reported in [EngineTripleVerification]
+     * discrepancies — a bounded pass is disclosed, never silent.
      */
-    fun verifyTriple(contradictions: List<EngineContradiction>): EngineTripleVerification {
+    const val MAX_VERIFIED_FINDINGS = 20
+
+    /** Longest evidence quote packed into one verification prompt. */
+    private const val MAX_QUOTE_CHARS = 500
+
+    /** A verdict is one short line; anything longer is prose, not a verdict. */
+    private const val VERDICT_MAX_TOKENS = 96
+
+    data class TripleVerificationOutcome(
+        val verification: EngineTripleVerification,
+        /** Input contradictions with per-finding [EngineContradiction.verificationStatus] recorded. */
+        val contradictions: List<EngineContradiction>
+    )
+
+    /**
+     * Deterministic-only entry point: no model legs. Both AI legs report
+     * NOT RUN and quorum is never met — the deterministic findings stand as
+     * measurements, and the report says exactly which verifiers examined them.
+     */
+    fun verifyTriple(contradictions: List<EngineContradiction>): EngineTripleVerification =
+        verifyTripleWithModels(
+            contradictions,
+            thesis = UnavailableGemma3Runtime,
+            antithesis = UnavailableAntithesisRuntime
+        ).verification
+
+    /**
+     * Full triple verification. Each available model leg re-examines every
+     * finding against its quoted evidence and returns a per-finding verdict:
+     *
+     *  - the THESIS leg independently verifies the finding;
+     *  - the ANTITHESIS leg is adversarial — it is instructed to REFUTE the
+     *    finding, and concurs only when it cannot;
+     *  - the SYNTHESIS leg is the deterministic Nine-Brain engine that emitted
+     *    the finding.
+     *
+     * Verdict handling fails closed: an unavailable leg is NOT RUN, an
+     * unparseable response is ABSTAINS, and only an explicit CONCUR counts
+     * toward quorum. Model dissent never deletes a finding — the finding is a
+     * deterministic measurement — it is recorded as a discrepancy and blocks
+     * quorum, which flags the finding set for human review.
+     *
+     * The antithesis leg only counts when it is a genuinely independent model:
+     * a model must not verify its own thesis (Prime Directive 13 — three
+     * INDEPENDENT verifiers).
+     */
+    fun verifyTripleWithModels(
+        contradictions: List<EngineContradiction>,
+        thesis: Gemma3Runtime,
+        antithesis: Gemma3Runtime
+    ): TripleVerificationOutcome {
         val hasVeryHigh = contradictions.any { it.severity == EngineSeverity.VERY_HIGH }
         val hasHigh = contradictions.any { it.severity == EngineSeverity.HIGH }
+        val nineBrainStatus = if (hasVeryHigh || hasHigh) "CONCURS" else "PENDING"
 
+        val discrepancies = mutableListOf<String>()
+        when {
+            hasVeryHigh -> Unit
+            hasHigh -> discrepancies += "No VERY_HIGH findings — confidence capped at HIGH pending review"
+            else -> discrepancies += "Only MODERATE/LOW findings — human review required"
+        }
+
+        val toVerify = contradictions.take(MAX_VERIFIED_FINDINGS)
+        if (contradictions.size > MAX_VERIFIED_FINDINGS) {
+            discrepancies += "AI legs verified the first $MAX_VERIFIED_FINDINGS of " +
+                "${contradictions.size} findings; the remainder are NOT RUN"
+        }
+
+        val independentAntithesis =
+            !(thesis.isAvailable() && antithesis.isAvailable() && thesis.modelName == antithesis.modelName)
+        val thesisLeg = runLeg(thesis, toVerify, refute = false)
+        val antithesisLeg = if (independentAntithesis) {
+            runLeg(antithesis, toVerify, refute = true)
+        } else {
+            discrepancies += "Antithesis leg NOT RUN — requires a model independent of the thesis " +
+                "(both slots held ${thesis.modelName})"
+            Leg("NOT RUN", emptyMap(), emptyList())
+        }
+
+        for (leg in listOf("Thesis" to thesisLeg, "Antithesis" to antithesisLeg)) {
+            if (leg.second.status == "NOT RUN" && leg.first == "Thesis") {
+                discrepancies += "Thesis leg NOT RUN — no on-device model loaded; " +
+                    "deterministic findings stand as measurements pending AI verification"
+            }
+            discrepancies += leg.second.dissents.map { "${leg.first} dissent — $it; human review required" }
+        }
+        if (thesisLeg.ranModel != null) discrepancies += "Thesis model: ${thesisLeg.ranModel}"
+        if (antithesisLeg.ranModel != null) discrepancies += "Antithesis model: ${antithesisLeg.ranModel}"
+
+        val verified = contradictions.map { c ->
+            c.copy(
+                verificationStatus = c.verificationStatus + mapOf(
+                    "gemma3" to (thesisLeg.perFinding[c.contradictionId] ?: "NOT RUN"),
+                    "phi3" to (antithesisLeg.perFinding[c.contradictionId] ?: "NOT RUN"),
+                    "nineBrain" to "CONCURS"
+                )
+            )
+        }
+
+        return TripleVerificationOutcome(
+            verification = EngineTripleVerification(
+                gemma3Status = thesisLeg.status,
+                phi3Status = antithesisLeg.status,
+                nineBrainStatus = nineBrainStatus,
+                quorumMet = nineBrainStatus == "CONCURS" &&
+                    thesisLeg.status == "CONCURS" && antithesisLeg.status == "CONCURS",
+                discrepancies = discrepancies
+            ),
+            contradictions = verified
+        )
+    }
+
+    private class Leg(
+        val status: String,
+        /** contradictionId → CONCURS / DISSENTS / ABSTAINS. */
+        val perFinding: Map<String, String>,
+        val dissents: List<String>,
+        val ranModel: String? = null
+    )
+
+    private fun runLeg(runtime: Gemma3Runtime, findings: List<EngineContradiction>, refute: Boolean): Leg {
+        if (!runtime.isAvailable() || findings.isEmpty()) return Leg("NOT RUN", emptyMap(), emptyList())
+        val perFinding = LinkedHashMap<String, String>()
+        val dissents = mutableListOf<String>()
+        var abstains = 0
+        for (c in findings) {
+            val verdict = parseVerdict(runtime.generate(buildVerdictPrompt(c, refute), VERDICT_MAX_TOKENS))
+            perFinding[c.contradictionId] = verdict.status
+            when (verdict.status) {
+                "DISSENTS" -> dissents += "${c.contradictionId}: ${verdict.reason}"
+                "ABSTAINS" -> abstains++
+            }
+        }
+        val status = when {
+            dissents.isNotEmpty() -> "DISSENTS (${dissents.size}/${findings.size})"
+            abstains > 0 -> "ABSTAINS ($abstains/${findings.size})"
+            else -> "CONCURS"
+        }
+        return Leg(status, perFinding, dissents, runtime.modelName)
+    }
+
+    /**
+     * One finding, one bounded prompt, one demanded verdict line. The evidence
+     * quotes come from the deterministic engine's own extraction — the model
+     * judges only whether the quoted statements can coexist.
+     */
+    internal fun buildVerdictPrompt(c: EngineContradiction, refute: Boolean): String = buildString {
+        if (refute) {
+            appendLine("You are the antithesis verifier for Verum Omnis triple verification.")
+            appendLine("Try to REFUTE this finding: find any reading under which both statements are true together.")
+        } else {
+            appendLine("You are the thesis verifier for Verum Omnis triple verification.")
+            appendLine("Independently verify this finding against the quoted evidence.")
+        }
+        appendLine("Finding ${c.contradictionId} (${c.type.name}): ${c.conflictDescription.take(MAX_QUOTE_CHARS)}")
+        appendLine("Statement A [${c.propositionAActor}]: \"${c.propositionAText.take(MAX_QUOTE_CHARS)}\"")
+        appendLine("Statement B [${c.propositionBActor}]: \"${c.propositionBText.take(MAX_QUOTE_CHARS)}\"")
+        appendLine(
+            if (refute) "If both statements can be true together, the finding fails and you must DISSENT."
+            else "The finding holds only if the statements cannot both be true."
+        )
+        appendLine("Reply with exactly one line:")
+        appendLine("VERDICT: CONCUR")
+        appendLine("or")
+        append("VERDICT: DISSENT | <short reason>")
+    }
+
+    internal data class Verdict(val status: String, val reason: String)
+
+    /**
+     * Fail-closed verdict parsing: only an explicit CONCUR concurs. A null
+     * generation, missing verdict line, or unrecognised verdict is ABSTAINS —
+     * silence or confusion is never counted as agreement.
+     */
+    internal fun parseVerdict(response: String?): Verdict {
+        val line = response?.lineSequence()?.map { it.trim() }
+            ?.firstOrNull { it.uppercase().startsWith("VERDICT:") }
+            ?: return Verdict("ABSTAINS", "no parseable verdict")
+        val body = line.substringAfter(":").trim()
         return when {
-            hasVeryHigh -> EngineTripleVerification(
-                gemma3Status = "CONCURS", phi3Status = "CONCURS",
-                nineBrainStatus = "CONCURS", quorumMet = true, discrepancies = emptyList()
-            )
-            hasHigh -> EngineTripleVerification(
-                gemma3Status = "CONCURS", phi3Status = "CONCURS",
-                nineBrainStatus = "CONCURS", quorumMet = true,
-                discrepancies = listOf("No VERY_HIGH findings — confidence capped at HIGH pending review")
-            )
-            else -> EngineTripleVerification(
-                gemma3Status = "CONCURS", phi3Status = "CONCURS",
-                nineBrainStatus = "PENDING", quorumMet = false,
-                discrepancies = listOf("Only MODERATE/LOW findings — human review required")
-            )
+            body.uppercase().startsWith("CONCUR") -> Verdict("CONCURS", "")
+            body.uppercase().startsWith("DISSENT") ->
+                Verdict("DISSENTS", body.substringAfter("|", "").trim().ifEmpty { "no reason given" })
+            else -> Verdict("ABSTAINS", "unrecognised verdict: ${body.take(60)}")
         }
     }
 
@@ -124,8 +295,10 @@ object TripleVerifier {
         appendLine().appendLine("-".repeat(70))
         appendLine("TRIPLE VERIFICATION")
         appendLine("-".repeat(70))
-        appendLine("Gemma 3 (Thesis):      ${report.tripleVerification.gemma3Status}")
-        appendLine("Phi-3 (Antithesis):    ${report.tripleVerification.phi3Status}")
+        // Slot labels, not model names: which model held each slot is recorded
+        // in the discrepancies ("Thesis model: ...") by verifyTripleWithModels.
+        appendLine("Thesis (writer):       ${report.tripleVerification.gemma3Status}")
+        appendLine("Antithesis (comm):     ${report.tripleVerification.phi3Status}")
         appendLine("9-Brain (Synthesis):   ${report.tripleVerification.nineBrainStatus}")
         appendLine("Quorum:                ${if (report.tripleVerification.quorumMet) "MET" else "NOT MET"}")
         if (report.tripleVerification.discrepancies.isNotEmpty()) {

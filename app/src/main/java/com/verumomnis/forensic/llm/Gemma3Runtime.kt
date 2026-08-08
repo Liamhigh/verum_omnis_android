@@ -41,3 +41,23 @@ object Gemma3RuntimeProvider {
     @Volatile
     var runtime: Gemma3Runtime = UnavailableGemma3Runtime
 }
+
+/** Default antithesis runtime when no independent communicator model is loaded. */
+object UnavailableAntithesisRuntime : Gemma3Runtime {
+    override val modelName: String = "unavailable"
+    override fun isAvailable(): Boolean = false
+    override fun generate(prompt: String, maxTokens: Int): String? = null
+}
+
+/**
+ * Runtime holder for the ANTITHESIS leg of triple verification (Prime
+ * Directive 13 — three independent verifiers). Installed only when the
+ * communicator model is loaded AND is a different model instance than the
+ * thesis/report writer: a model must never verify its own thesis, so on a
+ * device with a single loaded model this stays unavailable and the antithesis
+ * leg honestly reports NOT RUN.
+ */
+object AntithesisRuntimeProvider {
+    @Volatile
+    var runtime: Gemma3Runtime = UnavailableAntithesisRuntime
+}

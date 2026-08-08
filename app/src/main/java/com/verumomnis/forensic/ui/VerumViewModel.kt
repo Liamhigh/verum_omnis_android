@@ -366,6 +366,18 @@ class VerumViewModel(
     private fun installHybridEngineRuntime() {
         val model = reportWriterModel ?: communicatorModel ?: return
         Gemma3RuntimeProvider.runtime = LlamaCppGemma3Runtime.wrap(model)
+        // The antithesis leg of triple verification only counts when it is an
+        // INDEPENDENT model (Prime Directive 13 — three independent verifiers).
+        // adoptFallbackCommunicator may alias the communicator to the report
+        // writer; an aliased model must not verify its own thesis, so identity
+        // (not name) is what qualifies it here.
+        val communicator = communicatorModel
+        com.verumomnis.forensic.llm.AntithesisRuntimeProvider.runtime =
+            if (communicator != null && communicator !== model) {
+                LlamaCppGemma3Runtime.wrap(communicator)
+            } else {
+                com.verumomnis.forensic.llm.UnavailableAntithesisRuntime
+            }
     }
 
     fun downloadAndLoadModels() {

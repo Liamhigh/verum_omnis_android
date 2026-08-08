@@ -51,7 +51,7 @@
 | **B8 — Audio/Media Brain** | ⚠️ | ⚠️ | ❌ | ✅ | Metadata/tamper/transcript analysis; native Whisper/FFmpeg deferred |
 | **B9 — Guardian/Red Team** | ⚠️ | ❌ | ❌ | ✅ | `Safeguards` weaponization check; full `GuardianBrain` + Silence Ledger in progress |
 | Nine-Brain Orchestrator (voting/quorum) | ✅ | ✅ | ⚠️ | ✅ | `BrainCouncil` enforces B1 + ≥2 brain quorum; B9 never votes |
-| Triple Verification (Thesis/Antithesis/Synthesis) | ⚠️ | ⬜ | ❌ | ✅ | Model fields present; narrative generation wired to report |
+| Triple Verification (Thesis/Antithesis/Synthesis) | ✅ | ⬜ | ✅ | ✅ | Real model legs wired: thesis verifies, antithesis tries to refute, per-finding verdicts recorded; fails closed to NOT RUN without models; on-device validation pending |
 | ForensicService.scan() — Main entry point | ✅ | ✅ | ⚠️ | ✅ | End-to-end ingest → analyze → seal pipeline |
 | **G3 Hybrid Report Pipeline (GHRP)** | ✅ | ✅ | ✅ | ✅ | **MERGED (PR #3)** — Deterministic fallback; FindingsJsonEmitter; G3 candidate registry |
 | **VO-DSS-1.2 Seal/Verify (Android)** | ✅ | ✅ | ✅ | ✅ | **MERGED (PR #4)** — PDFBox-based; AES-256 encryption; chain-of-custody; interoperable with web |

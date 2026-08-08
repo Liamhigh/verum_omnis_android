@@ -120,11 +120,20 @@ class VerumContradictionEngine(
         // Step 2: Detect all contradictions (28 detectors: 10 base + 6 DIGSIM + 12 ported)
         val contradictions = ContradictionDetectors.detectAll(claims)
 
-        // Step 3: Triple verification
-        val tv = TripleVerifier.verifyTriple(contradictions)
+        // Step 3: Triple verification — the deterministic synthesis leg plus
+        // whatever model legs are installed on the app-wide runtime seams.
+        // With no models loaded both AI legs report NOT RUN and the pipeline
+        // remains byte-identical deterministic; tests may install fakes.
+        val outcome = TripleVerifier.verifyTripleWithModels(
+            contradictions,
+            thesis = com.verumomnis.forensic.llm.Gemma3RuntimeProvider.runtime,
+            antithesis = com.verumomnis.forensic.llm.AntithesisRuntimeProvider.runtime
+        )
+        val tv = outcome.verification
+        val verified = outcome.contradictions
 
         // Step 4: Actor profiles
-        val profiles = TripleVerifier.buildProfiles(claims, contradictions)
+        val profiles = TripleVerifier.buildProfiles(claims, verified)
 
         // Step 5: Corpus hash
         val corpusHash = ClaimExtractor.hashCorpus(atoms.map { it.content })
@@ -132,7 +141,7 @@ class VerumContradictionEngine(
         // Step 6: Assemble report
         return EngineForensicReport(
             caseId = caseId,
-            contradictions = contradictions,
+            contradictions = verified,
             actorProfiles = profiles,
             tripleVerification = tv,
             corpusHash = corpusHash,
