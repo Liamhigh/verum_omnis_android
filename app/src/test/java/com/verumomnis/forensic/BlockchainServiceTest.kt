@@ -32,6 +32,9 @@ class BlockchainServiceTest {
                 message = "Fake pending verification"
             )
 
+        override fun verifyLocal(otsProofBase64: String): OtsVerifyResult =
+            verify(otsProofBase64)
+
         override fun upgrade(otsProofBase64: String): OtsAnchorResult =
             OtsAnchorResult(
                 status = OtsStatus.CONFIRMED,

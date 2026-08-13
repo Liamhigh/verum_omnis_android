@@ -1612,7 +1612,16 @@ class VerumViewModel(
                     message = it.message ?: "Anchoring failed"
                 )
             }
-            res.otsProofBase64?.let { vault.storeOtsProof(seal.shortcode, it) }
+            val proof = res.otsProofBase64
+            if (proof != null) {
+                vault.storeOtsProof(seal.shortcode, proof)
+            } else if (vault.loadOtsProof(seal.shortcode) == null) {
+                // Calendars unreachable and nothing stored yet: queue the digest
+                // so the launch-time AnchorUpgrader submits it when online. Never
+                // overwrites an existing proof — a pending proof is evidence the
+                // digest was submitted, and a marker is strictly less than that.
+                vault.storeOtsProof(seal.shortcode, AnchorUpgrader.UNANCHORED_PREFIX + seal.sha512)
+            }
             updateSealAfterAnchor(res)
             val status = when (res.status) {
                 OtsStatus.PENDING -> "PENDING · digest ${res.sha256Digest.take(12)}… submitted to ${res.calendarUrls.size} calendar(s). Proof: ${res.otsProofFile}"

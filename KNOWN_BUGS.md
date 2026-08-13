@@ -2,8 +2,8 @@
 
 **Document Purpose:** Tracks all existing bugs, unfinished features, and technical debt. The coding assistant checks this file before starting work and updates it as issues are resolved.
 
-**Last Updated:** 2026-07-13  
-**Version:** v5.2.8  
+**Last Updated:** 2026-08-07  
+**Version:** v5.3.1c · Constitution v8.0  
 **Status:** 0 confirmed critical bugs
 
 ---

@@ -2,9 +2,16 @@
 
 **Document Purpose:** A living tracker of every feature's implementation status. The coding assistant works through this systematically until every row is COMPLETE.
 
-**Last Updated:** 2026-07-16  
-**Version:** v5.3.1c-dss12-research  
-**Repository:** `github.com/Liamhigh/1verum`
+**Last Updated:** 2026-08-07  
+**Version:** v5.3.1c · Constitution v8.0 (operating instrument)  
+**Repository:** `github.com/Liamhigh/verum_omnis_android`
+
+**2026-08-07 update (truth pass + this cycle's work):**
+- Constitution v8.0 FINAL adopted as the operating instrument (`Constitution.kt` VERSION=8.0, PD17–20, sealed PDF bundled)
+- Triple verification is REAL: model legs verify per finding and can dissent; fails closed to NOT RUN (`TripleVerifier.verifyTripleWithModels`)
+- OTS confirmation handling complete: attested block height + confirmation depth parsed from the proof; offline seals queued (`UNANCHORED:` marker) and auto-submitted by `AnchorUpgrader` on launch
+- 2026-08 model refresh staged behind pinned-hash gate (Gemma 4 E4B/E2B, Qwen3.5-4B; run `tools/pin-models.sh` to activate); llama.cpp pinned at b10312
+- The LLM table below was stale (claimed the JNI bridge was missing); corrected against the code
 
 **Recent Changes:**
 - PR #3 (GHRP) — **MERGED** — G3 Hybrid Report Pipeline with deterministic fallback
@@ -39,7 +46,7 @@
 |---------|---------|-----|-------|-------|-------|
 | Evidence Vault (AES-256-GCM encrypted storage) | ✅ | ✅ | ⚠️ | ✅ | Keystore-backed AES-256-GCM with StrongBox/TEE fallback |
 | SHA-512 Hash Generation | ✅ | ✅ | ⚠️ | ✅ | Core hashing works across evidence, reports and email |
-| Blockchain Anchoring (OpenTimestamps) | ⚠️ | ⬜ | ❌ | ⚠️ | `OpenTimestampsService.kt` exists; Bitcoin confirmation handling pending |
+| Blockchain Anchoring (OpenTimestamps) | ✅ | ⚠️ | ✅ | ✅ | Anchor + upgrade + confirmation depth (block height, confirmations) + offline queue with launch retry |
 | QR Code Generation (seal verification) | ✅ | ⚠️ | ❌ | ✅ | ZXing QR generated on PDF cover; in-app scanner not yet built |
 | **B1 — Contradiction Engine** | ✅ | ✅ | ⚠️ | ✅ | `engine/contradiction/` hybrid engine (rules + deterministic embeddings + calibration) wired as primary B1 path; legacy `v531c/` deprecated |
 | **B2 — Document Forensics** | ✅ | ✅ | ⚠️ | ✅ | Creator-tool mismatch, PDF metadata tamper, EXIF/GPS consistency checks |
@@ -61,13 +68,13 @@
 
 | Feature | Backend | UI | Tests | Build | Notes |
 |---------|---------|-----|-------|-------|-------|
-| llama.cpp JNI Bridge | ❌ | ⬜ | ❌ | ❌ | Native C++ integration for model loading — blocked by NDK |
+| llama.cpp JNI Bridge | ✅ | ⬜ | ⚠️ | ⚠️ | `voinference_jni.cpp` + CMake FetchContent (pinned b10312); androidTest smoke needs a device |
 | Gemma 3 4B — Report Writer | ✅ | ✅ | ⚠️ | ✅ | `FindingsJsonEmitter` + G3 candidate tier wired; DRE research prompt integrated; native model deferred |
-| PHI-3 Mini 3.8B — Chat (Entry/Mid) | ❌ | ⬜ | ❌ | ❌ | Native model deferred |
-| Command R 4B — Chat (Mid) | ❌ | ⬜ | ❌ | ❌ | Native model deferred |
-| Gemma 4 12B — Chat (Flagship) | ❌ | ⬜ | ❌ | ❌ | Native model deferred |
-| Device Tier Detection (<4GB / 4-8GB / 8GB+) | ⚠️ | ⬜ | ❌ | ✅ | `DeviceTier` present; model selection not yet wired |
-| Model Integrity Verification (SHA-256 + sig) | ❌ | ⬜ | ❌ | ❌ | Pending native model download system |
+| PHI-3 Mini 3.8B — Chat (Entry/Mid) | ✅ | ✅ | ⚠️ | ✅ | Download+load wired via `ModelCatalog`; Qwen3.5-4B staged as successor (pending hash pin) |
+| Command R 4B — Chat (Mid) | ⬜ | ⬜ | ⬜ | ⬜ | Dropped from the architecture — three-model set (writer/communicator/flagship) |
+| Gemma 4 12B — Chat (Flagship) | ✅ | ✅ | ⚠️ | ✅ | Download+load wired (8GB+ tier); on-device inference validation pending |
+| Device Tier Detection (<4GB / 4-8GB / 8GB+) | ✅ | ⬜ | ✅ | ✅ | `DeviceTier`/`ModelLoader` + RAM-aware `ModelCatalog.forName` |
+| Model Integrity Verification (SHA-256 + sig) | ✅ | ⬜ | ⚠️ | ✅ | `ModelDownloadManager` verifies SHA-256 before load; unpinned specs never offered |
 | Dynamic Model Unloading (background) | ❌ | ⬜ | ❌ | ❌ | Pending native LLM integration |
 | Chat Interface (PHR3/G4) | ✅ | ✅ | ❌ | ✅ | Jetpack Compose chat UI exists; now includes research keywords |
 | System Prompt Enforcement (10-word max) | ❌ | ⬜ | ❌ | ✅ | Constitutional prompt length validation pending |

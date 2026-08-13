@@ -1,5 +1,6 @@
 package com.verumomnis.forensic.seal
 
+import com.verumomnis.forensic.blockchain.BlockchainService
 import com.verumomnis.forensic.blockchain.OpenTimestampsService
 import com.verumomnis.forensic.model.OtsStatus
 import com.verumomnis.forensic.vault.EvidenceVault
@@ -26,8 +27,19 @@ import com.verumomnis.forensic.vault.EvidenceVault
  */
 class AnchorUpgrader(
     private val vault: EvidenceVault,
-    private val service: OpenTimestampsService = OpenTimestampsService
+    private val service: BlockchainService = OpenTimestampsService
 ) {
+
+    companion object {
+        /**
+         * Marker stored in place of a proof when a seal was created with the
+         * calendars unreachable: `UNANCHORED:<sha512hex>`. The colon keeps it
+         * unmistakable for Base64 proof data. On the next [upgrade] run the
+         * digest is submitted fresh — the "stored locally for later
+         * submission" promise, made real.
+         */
+        const val UNANCHORED_PREFIX = "UNANCHORED:"
+    }
 
     data class Outcome(
         val shortcode: String,
@@ -45,9 +57,13 @@ class AnchorUpgrader(
     fun upgrade(shortcode: String): Outcome? {
         val stored = vault.loadOtsProof(shortcode) ?: return null
 
+        // A seal created offline has no proof yet, only its queued digest —
+        // submit it now instead of trying to upgrade nothing.
+        if (stored.startsWith(UNANCHORED_PREFIX)) return anchorQueuedDigest(shortcode, stored)
+
         // Already confirmed? Don't touch the calendars again; a confirmed proof
         // is final and re-submitting would only risk replacing it with a worse one.
-        val before = runCatching { service.verifyBase64(stored, checkBitcoin = false) }.getOrNull()
+        val before = runCatching { service.verifyLocal(stored) }.getOrNull()
         if (before?.status == OtsStatus.CONFIRMED) {
             return Outcome(shortcode, OtsStatus.CONFIRMED, "Bitcoin attestation already present.", false)
         }
@@ -86,4 +102,34 @@ class AnchorUpgrader(
      */
     fun upgradeAllPending(): List<Outcome> =
         vault.listOtsShortcodes().mapNotNull { upgrade(it) }
+
+    /**
+     * Submits a digest that was queued while offline. The marker is replaced
+     * by the real pending proof only when a calendar actually accepts the
+     * digest; a failed submission keeps the marker so nothing is lost and the
+     * next run retries.
+     */
+    private fun anchorQueuedDigest(shortcode: String, marker: String): Outcome {
+        val sha512 = marker.removePrefix(UNANCHORED_PREFIX).trim()
+        val result = runCatching { service.anchor(sha512) }.getOrNull()
+        val proof = result?.otsProofBase64
+        return if (result != null && proof != null &&
+            (result.status == OtsStatus.PENDING || result.status == OtsStatus.CONFIRMED)
+        ) {
+            runCatching { vault.storeOtsProof(shortcode, proof) }
+            Outcome(
+                shortcode = shortcode,
+                status = result.status,
+                message = "Queued offline seal submitted — ${result.message}",
+                newlyConfirmed = result.status == OtsStatus.CONFIRMED
+            )
+        } else {
+            Outcome(
+                shortcode = shortcode,
+                status = OtsStatus.OFFLINE,
+                message = "Offline seal still unanchored — calendars unreachable; will retry.",
+                newlyConfirmed = false
+            )
+        }
+    }
 }

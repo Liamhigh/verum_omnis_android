@@ -29,5 +29,9 @@ data class OtsVerifyResult(
     val pending: Boolean,
     val bitcoinAttested: Boolean,
     val bitcoinTipHeight: Long? = null,
+    /** Bitcoin block height carrying the attestation, when parseable. */
+    val attestedBlockHeight: Long? = null,
+    /** Depth of the attestation vs the current tip (tip - height + 1); null offline. */
+    val confirmations: Long? = null,
     val message: String = ""
 )

@@ -108,11 +108,21 @@ object OpenTimestampsService : BlockchainService {
         }
     }
 
+    /**
+     * Attestation depth at which a Bitcoin timestamp is conventionally treated
+     * as settled. An attestation below this is still real — it is in a mined
+     * block — but the report should disclose its youth.
+     */
+    const val SETTLED_CONFIRMATIONS = 6L
+
     /** Inspect/verify a detached .ots proof. Optionally checks Bitcoin reachability. */
     fun verify(otsProof: ByteArray, checkBitcoin: Boolean = true, timeoutMs: Int = 15_000): OtsVerifyResult {
         val attested = containsSubsequence(otsProof, BITCOIN_TAG)
         val pending = containsSubsequence(otsProof, PENDING_TAG)
         val tip = if (checkBitcoin) runCatching { bitcoinTipHeight(timeoutMs) }.getOrNull() else null
+        val height = if (attested) attestedBitcoinHeight(otsProof) else null
+        // +1: a proof attested in the tip block itself has one confirmation.
+        val confirmations = if (height != null && tip != null && tip >= height) tip - height + 1 else null
         val status = when {
             attested -> OtsStatus.CONFIRMED
             pending -> OtsStatus.PENDING
@@ -123,8 +133,21 @@ object OpenTimestampsService : BlockchainService {
             pending = pending && !attested,
             bitcoinAttested = attested,
             bitcoinTipHeight = tip,
+            attestedBlockHeight = height,
+            confirmations = confirmations,
             message = when (status) {
-                OtsStatus.CONFIRMED -> "Bitcoin block-header attestation present."
+                OtsStatus.CONFIRMED -> buildString {
+                    append("Bitcoin block-header attestation present")
+                    if (height != null) append(" (block $height")
+                    if (confirmations != null) {
+                        append(", $confirmations confirmation${if (confirmations == 1L) "" else "s"}")
+                        if (confirmations < SETTLED_CONFIRMATIONS) {
+                            append(" — young attestation, <$SETTLED_CONFIRMATIONS")
+                        }
+                    }
+                    if (height != null) append(")")
+                    append(".")
+                }
                 OtsStatus.PENDING -> "Pending calendar attestation; awaiting Bitcoin confirmation."
                 else -> "No recognised OTS attestation found."
             }
@@ -133,6 +156,42 @@ object OpenTimestampsService : BlockchainService {
 
     override fun verify(otsProofBase64: String): OtsVerifyResult =
         verifyBase64(otsProofBase64)
+
+    override fun verifyLocal(otsProofBase64: String): OtsVerifyResult =
+        verifyBase64(otsProofBase64, checkBitcoin = false)
+
+    /**
+     * The Bitcoin block height this proof is attested in, or null when no
+     * parseable attestation is present.
+     *
+     * OTS serialization: attestation = 8-byte tag, then varbytes payload
+     * (varint length + bytes); for a Bitcoin block-header attestation the
+     * payload is a single varint block height. Parsed defensively — a
+     * malformed varint yields null, never a wrong height.
+     */
+    internal fun attestedBitcoinHeight(proof: ByteArray): Long? {
+        val tagIndex = indexOfSubsequence(proof, BITCOIN_TAG) ?: return null
+        val afterTag = tagIndex + BITCOIN_TAG.size
+        val payloadLength = readVarint(proof, afterTag) ?: return null
+        return readVarint(proof, payloadLength.nextIndex)?.value
+    }
+
+    private data class VarintRead(val value: Long, val nextIndex: Int)
+
+    /** Little-endian base-128 varint (MSB = continuation), as used by OTS. */
+    private fun readVarint(bytes: ByteArray, start: Int): VarintRead? {
+        var value = 0L
+        var shift = 0
+        var pos = start
+        while (pos < bytes.size && shift < 63) {
+            val b = bytes[pos].toInt() and 0xff
+            value = value or ((b and 0x7f).toLong() shl shift)
+            pos++
+            if (b and 0x80 == 0) return VarintRead(value, pos)
+            shift += 7
+        }
+        return null
+    }
 
     fun verifyBase64(otsProofBase64: String, checkBitcoin: Boolean = true): OtsVerifyResult =
         verify(java.util.Base64.getDecoder().decode(otsProofBase64), checkBitcoin)
@@ -258,13 +317,16 @@ object OpenTimestampsService : BlockchainService {
             message = message
         )
 
-    private fun containsSubsequence(haystack: ByteArray, needle: ByteArray): Boolean {
-        if (needle.isEmpty() || haystack.size < needle.size) return false
+    private fun containsSubsequence(haystack: ByteArray, needle: ByteArray): Boolean =
+        indexOfSubsequence(haystack, needle) != null
+
+    private fun indexOfSubsequence(haystack: ByteArray, needle: ByteArray): Int? {
+        if (needle.isEmpty() || haystack.size < needle.size) return null
         outer@ for (i in 0..haystack.size - needle.size) {
             for (j in needle.indices) if (haystack[i + j] != needle[j]) continue@outer
-            return true
+            return i
         }
-        return false
+        return null
     }
 
     fun hexToBytes(hex: String): ByteArray {

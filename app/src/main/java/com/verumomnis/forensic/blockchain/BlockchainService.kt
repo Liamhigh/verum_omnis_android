@@ -18,6 +18,13 @@ interface BlockchainService {
     /** Verify a detached .ots proof (Base64). */
     fun verify(otsProofBase64: String): OtsVerifyResult
 
+    /**
+     * Inspect a detached .ots proof (Base64) without any network I/O — proof
+     * structure and attestation tags only. Safe to call from retry loops that
+     * must never block on connectivity.
+     */
+    fun verifyLocal(otsProofBase64: String): OtsVerifyResult
+
     /** Upgrade a pending proof to a Bitcoin-attested proof, if available. */
     fun upgrade(otsProofBase64: String): OtsAnchorResult
 }
