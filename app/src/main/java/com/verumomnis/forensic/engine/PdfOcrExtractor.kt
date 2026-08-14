@@ -12,6 +12,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.text.PDFTextStripper
+import com.verumomnis.forensic.crypto.Sha512
 import java.io.File
 
 /**
@@ -26,6 +27,12 @@ import java.io.File
  *
  * This mirrors the website's selective OCR (only image-only pages are OCR'd),
  * but uses the platform's native recogniser instead of tesseract.js.
+ *
+ * Two guards keep OCR work proportional to actual scans ([OcrPolicy]):
+ * a thin page must also carry a raster image to be OCR'd (a page whose whole
+ * content is a page number is already fully extracted), and extraction is
+ * cached by document SHA-512 ([TextExtractionCache]) so re-uploading the same
+ * bundle never re-parses or re-OCRs it.
  */
 class PdfOcrExtractor(
     private val context: Context,
@@ -33,6 +40,13 @@ class PdfOcrExtractor(
     private val thinPageChars: Int = DEFAULT_THIN_PAGE_CHARS,
     /** Cap on pages to OCR, to bound worst-case time on very large scans. */
     private val maxOcrPages: Int = DEFAULT_MAX_OCR_PAGES,
+    /**
+     * Content-addressed extraction cache; null disables. The same document
+     * (by SHA-512) is parsed and OCR'd once, then served in milliseconds on
+     * every later upload or re-scan.
+     */
+    private val cache: TextExtractionCache? =
+        TextExtractionCache(File(context.cacheDir, "vo_text_cache")),
 ) : PdfTextExtractor {
 
     companion object {
@@ -52,6 +66,10 @@ class PdfOcrExtractor(
     var lastOcrPageCount: Int = 0
         private set
     var lastSkippedPageCount: Int = 0
+        private set
+
+    /** True when the last extraction was served from the content cache. */
+    var lastServedFromCache: Boolean = false
         private set
 
     /**
@@ -80,9 +98,24 @@ class PdfOcrExtractor(
     private fun extract(pdf: File?, bytes: ByteArray?): String {
         lastOcrPageCount = 0
         lastSkippedPageCount = 0
+        lastServedFromCache = false
 
-        // 1. Per-page text-layer extraction with PDFBox.
+        // 0. Content-addressed cache: the same document is extracted once.
+        val contentHash = cache?.let {
+            runCatching { if (pdf != null) Sha512.hash(pdf) else Sha512.hash(bytes!!) }.getOrNull()
+        }
+        if (contentHash != null) {
+            cache?.get(contentHash)?.let {
+                lastServedFromCache = true
+                return it
+            }
+        }
+
+        // 1. Per-page text-layer extraction with PDFBox, noting which pages
+        //    actually carry raster images (scans) — a thin page without any
+        //    image has nothing OCR could read; its text layer IS the page.
         val pageText: MutableList<String> = mutableListOf()
+        val pageHasImages: MutableList<Boolean> = mutableListOf()
         try {
             (if (pdf != null) PDDocument.load(pdf) else PDDocument.load(bytes!!)).use { doc ->
                 val stripper = PDFTextStripper()
@@ -91,22 +124,27 @@ class PdfOcrExtractor(
                     stripper.startPage = i
                     stripper.endPage = i
                     pageText.add((stripper.getText(doc) ?: "").trim())
+                    pageHasImages.add(pageBearsImage(doc, i - 1))
                 }
             }
         } catch (e: Exception) {
             // PDFBox failed entirely; fall back to whole-doc OCR below.
         }
 
-        // Which pages need OCR (thin/empty text layer)?
-        val needsOcr = pageText.mapIndexedNotNull { idx, t -> if (t.length < thinPageChars) idx else null }
+        // Which pages need OCR? Thin text layer AND an actual image to read.
+        val needsOcr = OcrPolicy.selectOcrPages(pageText.map { it.length }, pageHasImages, thinPageChars)
         if (pageText.isNotEmpty() && needsOcr.isEmpty()) {
-            return pageText.joinToString("\n").trim() // fully machine-readable; no OCR needed
+            val text = pageText.joinToString("\n").trim() // machine-readable; no OCR needed
+            if (contentHash != null && text.isNotEmpty()) cache?.put(contentHash, text)
+            return text
         }
 
         // 2. OCR the image-only pages (or all pages if PDFBox found nothing).
         val ocrByPage = ocrPages(pdf, bytes, if (pageText.isEmpty()) null else needsOcr.toSet())
 
-        // 3. Merge: text layer where present, OCR where we have it.
+        // 3. Merge: text layer where present, OCR where we have it. A thin page
+        //    with no OCR result still contributes its text layer — a bare page
+        //    number is that page's complete content, not a failure.
         val out = StringBuilder()
         val total = if (pageText.isNotEmpty()) pageText.size else ocrByPage.keys.maxOrNull()?.plus(1) ?: 0
         for (i in 0 until total) {
@@ -115,12 +153,25 @@ class PdfOcrExtractor(
             when {
                 layer.length >= thinPageChars -> out.append(layer)
                 ocr != null && ocr.isNotBlank() -> out.append("[OCR] ").append(ocr)
+                layer.isNotBlank() -> out.append(layer)
                 else -> { /* page genuinely unreadable */ }
             }
             out.append('\n')
         }
-        return out.toString().trim()
+        val text = out.toString().trim()
+        if (contentHash != null && text.isNotEmpty()) cache?.put(contentHash, text)
+        return text
     }
+
+    /**
+     * Whether the page's resources include a raster image XObject. Unknown or
+     * malformed resources count as image-bearing: over-OCR'ing a broken page is
+     * recoverable, skipping a real scan drops evidence.
+     */
+    private fun pageBearsImage(doc: PDDocument, pageIndex: Int): Boolean = runCatching {
+        val resources = doc.getPage(pageIndex).resources ?: return@runCatching false
+        resources.xObjectNames.any { name -> resources.isImageXObject(name) }
+    }.getOrDefault(true)
 
     /**
      * Render pages to bitmaps and run ML Kit OCR. If [only] is null, OCR every
