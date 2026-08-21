@@ -1,8 +1,11 @@
 # Verum Omnis — Android Forensic AI
 
 **AI Forensics for Truth.** A native Android application (Kotlin + Jetpack Compose)
-implementing the Verum Omnis constitutional forensic platform described in the
-technical specification (Constitution v5.2.7 · Nine-Brain v1.0).
+implementing the Verum Omnis constitutional forensic platform
+(Constitution **v8.0 FINAL**, sealed `VO-9A4F3C5E825C` · Nine-Brain v1.0 · app v5.3.1c).
+
+> New machine? See **[BUILDING.md](BUILDING.md)** for the complete local build
+> setup (JDK 17, SDK 34, NDK 27.2, CMake 3.22.1).
 
 The UI theme mirrors [verumglobal.foundation](https://www.verumglobal.foundation)
 — gold on dark navy with Cormorant Garamond, Source Sans 3 and JetBrains Mono.
